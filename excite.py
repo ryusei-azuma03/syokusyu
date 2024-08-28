@@ -3,10 +3,16 @@ import os
 import pandas as pd
 from openai import OpenAI
 
-# OpenAIのクライアントを初期化
-client = OpenAI()
-
+# 環境変数からAPIキーを取得
 api_key = os.getenv("OPENAI_API_KEY")
+
+# OpenAIのクライアントを初期化
+client = OpenAI(api_key=api_key)
+
+# APIキーが設定されていない場合のエラーハンドリング
+if not api_key:
+    st.error("OpenAI APIキーが設定されていません。環境変数OPENAI_API_KEYを設定してください。")
+    st.stop()
 
 # CSVデータの読み込み
 file_path = 'shokusyu_videos.csv'  # アップロードされたファイルへのパスを使用
@@ -23,7 +29,7 @@ job_fee_mapping = {
     "データサイエンティスト": "100万円～140万円",
     "データアナリスト": "80万円～120万円",
     "DWHエンジニア(データエンジニア)": "80万円～120万円",
-    "IOTエンジニア": "90万円～140万円"
+    "IOTエンジニア": "90万円～150万円"
 }
 
 st.title('IT職種解説アプリ')
@@ -50,16 +56,20 @@ def run_gpt(ankenkpronputo, selected_job, selected_industry, selected_department
                    .replace("{selected_job}", selected_job)
                    .replace("{selected_industry}", selected_industry)
                    .replace("{selected_department}", selected_department))
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "user", "content": full_prompt},
-        ],
-    )
-    output_content = response.choices[0].message.content.strip()
-    return output_content
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "user", "content": full_prompt},
+            ],
+        )
+        output_content = response.choices[0].message.content.strip()
+        return output_content
+    except Exception as e:
+        st.error(f"OpenAI APIエラー: {str(e)}")
+        return None
 
-# 案件プロンプトの定義　　
+# 案件プロンプトの定義
 ankenkpronputo = """
 #依頼
 {selected_job}を業務委託で募集します。
@@ -103,21 +113,22 @@ if is_button_clicked:
     if (ankenkpronputo != ""):
         st.write("案件生成中・・")
         output_content_text = run_gpt(ankenkpronputo, selected_job, selected_industry, selected_department)
-        st.write(output_content_text)
-        st.download_button(label='案件内容 Download', 
-                           data=output_content_text, 
-                           file_name='out_put.txt',
-                           mime='text/plain',
-                          )
+        if output_content_text:
+            st.write(output_content_text)
+            st.download_button(label='案件内容 Download', 
+                               data=output_content_text, 
+                               file_name='out_put.txt',
+                               mime='text/plain',
+                              )
 
-        # 案件イメージ生成後に他の要素を表示
-        if selected_job:
-            fee_estimate = job_fee_mapping.get(selected_job, "報酬目安が設定されていません")
-            st.markdown(f"<h2 style='font-size: 150%;'>{selected_job}の報酬目安: {fee_estimate}</h2>", unsafe_allow_html=True)
+            # 案件イメージ生成後に他の要素を表示
+            if selected_job:
+                fee_estimate = job_fee_mapping.get(selected_job, "報酬目安が設定されていません")
+                st.markdown(f"<h2 style='font-size: 150%;'>{selected_job}の報酬目安: {fee_estimate}</h2>", unsafe_allow_html=True)
 
-        if selected_job:
-            job_info = df[df.iloc[:, 0] == selected_job].iloc[0]
-            videos = job_info[1].split("\n")
-            st.write(f"### {selected_job}の解説動画")
-            for video in videos:
-                st.video(video)
+            if selected_job:
+                job_info = df[df.iloc[:, 0] == selected_job].iloc[0]
+                videos = job_info[1].split("\n")
+                st.write(f"### {selected_job}の解説動画")
+                for video in videos:
+                    st.video(video)
