@@ -3,3 +3,4 @@ ipykernel>=6.0.0,<7.0.0
 asari>=0.1.0,<0.3.0
 jupyter-server>=2.0.0,<3.0.0
 packaging>=20.0,<22.0
+openai==1.12.0
