@@ -3,20 +3,24 @@ import os
 import pandas as pd
 from openai import OpenAI
 
-# 環境変数からAPIキーを取得
-api_key = os.getenv("OPENAI_API_KEY")
+# Streamlit Cloudの環境変数からAPIキーを取得
+api_key = st.secrets["OPENAI_API_KEY"]
 
 # OpenAIのクライアントを初期化
 client = OpenAI(api_key=api_key)
 
 # APIキーが設定されていない場合のエラーハンドリング
 if not api_key:
-    st.error("OpenAI APIキーが設定されていません。環境変数OPENAI_API_KEYを設定してください。")
+    st.error("OpenAI APIキーが設定されていません。Streamlit Cloudの設定でOPENAI_API_KEYを設定してください。")
     st.stop()
 
 # CSVデータの読み込み
-file_path = 'shokusyu_videos.csv'  # アップロードされたファイルへのパスを使用
-df = pd.read_csv(file_path, encoding='shift_jis', header=None)
+@st.cache_data
+def load_data():
+    file_path = 'shokusyu_videos.csv'  # アップロードされたファイルへのパスを使用
+    return pd.read_csv(file_path, encoding='shift_jis', header=None)
+
+df = load_data()
 
 # 職種と報酬目安のマッピング
 job_fee_mapping = {
